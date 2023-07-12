@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+from datetime import datetime
 import sys
 from http import HTTPStatus
 
@@ -128,42 +129,43 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     if not check_tokens():
-        logging.critical(
-            'Отсутствуют переменные окружения',
-            'Программа принудительно остановлена!'
-        )
-        exit()
-
+        message = 'Отсутствуют одна или несколько переменных окружения'
+        logging.critical(message)
+        sys.exit(message)
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     old_status_homework = ''
-    old_exception = ''
 
     while True:
-
         try:
-            response_get_api = get_api_answer(timestamp)
-            timestamp = response_get_api.get('current_date')
-            homeworks = check_response(response_get_api)
+            response = get_api_answer(timestamp)
+            timestamp = response.get('current_date', timestamp)
+            homeworks = check_response(response)
 
-            if not homeworks:
-                message = 'Нет домашних работ'
-                logging.debug(message)
-
-            new_status_homework = parse_status(homeworks[0])
-
-            if new_status_homework != old_status_homework:
-                message = new_status_homework
+            if homeworks:
+                homeworks = homeworks[0]
+                message = parse_status(homeworks)
+                logging.debug('Новый статус')
+            else:
+                message = (f'За период от {datetime.fromtimestamp(timestamp)}'
+                           'до настоящего'
+                           ' момента изменения статуса домашней работы нет.')
+                logging.debug('Новых статусов нет')
+            if message != old_status_homework:
                 send_message(bot, message)
-                old_status_homework = new_status_homework
+                old_status_homework = message
+            else:
+                logging.debug('Данное сообщение уже было отправлено')
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            logging.error(error.__context__)
-            new_exception = message
-            if new_exception != old_exception:
+            logging.exception(message)
+            if message != old_status_homework:
                 send_message(bot, message)
-                old_exception = new_exception
+                old_status_homework = message
+            else:
+                logging.debug(f'Данное сообщение о {error}'
+                              ' уже было отправлено')
 
         finally:
             time.sleep(RETRY_PERIOD)
