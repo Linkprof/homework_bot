@@ -1,4 +1,4 @@
 class HttpResponseError(Exception):
-    """Ошибка ответа."""
+    """Ошибка ответа http."""
 
     pass
