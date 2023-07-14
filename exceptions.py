@@ -1,4 +1,10 @@
 class HttpResponseError(Exception):
     """Ошибка ответа http."""
 
-    pass
+
+class StatusUnknown(Exception):
+    """Статус неизвестен."""
+
+
+class TelegramError():
+    """Ошибка телеграмма."""
